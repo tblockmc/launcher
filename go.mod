@@ -2,7 +2,10 @@ module github.com/havrydotdev/tblock-launcher
 
 go 1.24.5
 
-require fyne.io/fyne/v2 v2.7.1
+require (
+	fyne.io/fyne/v2 v2.7.1
+	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
+)
 
 require (
 	fyne.io/systray v1.11.1-0.20250603113521-ca66a66d8b58 // indirect
@@ -36,5 +39,6 @@ require (
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

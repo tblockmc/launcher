@@ -1,0 +1,51 @@
+name: TBlockMC Release Binary
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "*" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build_windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        path-type: inherit
+        update: true
+        install: >-
+          make
+          wget
+          zip
+          p7zip
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Install Dependencies
+      run: >
+        pacman -Syu &&
+        pacman --noconfirm -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-mpv
+
+    - name: Install Fyne tool
+      run: go install fyne.io/fyne/v2/cmd/fyne@latest
+
+    - name: Package
+      run: fyne package -os windows --icon Icon.png --executable tblockmc.exe --release
+
+    - name: Generate zip bundle
+      run: zip tblockmc-win.zip tblockmc.exe
+
+    - name: Upload zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: TblockMC_win_x64.zip
+        path: tblockmc-win.zip

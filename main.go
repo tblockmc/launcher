@@ -10,19 +10,11 @@ import (
 	"github.com/havrydotdev/tblock-launcher/pkg/utils"
 )
 
-//go:embed options.txt
-var options []byte
-
-//go:embed servers.dat
-var servers []byte
-
-//go:embed tblauncher.png
-var background []byte
-
+// TODO: remove console logging in release mode
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered. Error:\n", r)
+			fmt.Println("Recovered. Error: \n", r)
 		}
 	}()
 
@@ -37,11 +29,13 @@ func main() {
 		cfg = launcher.NewConfig("", gameDir)
 	}
 
-	l := tblock.NewLauncher(cfg, background, options, servers)
-	l.Run()
+	l := tblock.NewLauncher(cfg)
+	defer func() {
+		err := launcher.PersistConfig(gameDir, l.Config)
+		if err != nil {
+			log.Println("Failed to persist config: ", err)
+		}
+	}()
 
-	err = launcher.PersistConfig(gameDir, l.Config)
-	if err != nil {
-		log.Println("Failed to persist config: ", err)
-	}
+	l.Run()
 }

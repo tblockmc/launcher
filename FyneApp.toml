@@ -1,9 +1,9 @@
 [Details]
   Icon = "Icon.png"
   Name = "TblockMC Launcher"
-  ID = "wtf.tblock.launcher"
+  ID = "com.tblockmc.launcher"
   Version = "0.0.1"
-  Build = 16
+  Build = 33
 
 [Development]
   HelperText = "This binary was built with debug symbols"
@@ -12,10 +12,4 @@
   HelperText = "This binary was built without debug symbols"
 
 [Source]
-  Repo = "https://github.com/havrydotdev/tblock-launcher"
-
-[LinuxAndBSD]
-  GenericName = "Toolkit Demo"
-  Categories = ["Development"]
-  Comment = "A demo of Fyne and its capabilities."
-  Keywords = ["demo", "fyne"]
+  Repo = "https://github.com/tblockmc/launcher"

@@ -5,10 +5,11 @@ import (
 	"path"
 )
 
+// TODO: remove hard-coded versions
 const (
 	McVersion       = "1.21.4"
 	DefaultMemory   = "4G"
-	DefaultJavaPath = "java"
+	DefaultJavaPath = ""
 )
 
 func GetTblockFolderPath() (string, error) {
