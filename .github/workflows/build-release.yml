@@ -36,10 +36,11 @@ jobs:
         pacman --noconfirm -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-mpv
 
     - name: Install Fyne tool
-      run: go install fyne.io/fyne/v2/cmd/fyne@latest
+      run: go install fyne.io/tools/cmd/fyne@latest
 
     - name: Package
-      run: fyne package -os windows --icon Icon.png --executable tblockmc.exe --release
+      run:
+         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
 
     - name: Generate zip bundle
       run: zip tblockmc-win.zip tblockmc.exe
@@ -47,5 +48,5 @@ jobs:
     - name: Upload zip
       uses: actions/upload-artifact@v4
       with:
-        name: TblockMC_win_x64.zip
-        path: tblockmc-win.zip
+        name: TblockMC_win_x64.exe
+        path: tblockmc.exe
