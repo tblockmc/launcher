@@ -1,6 +1,6 @@
 [Details]
   Icon = "Icon.png"
-  Name = "TblockMC Launcher"
+  Name = "tblockmc"
   ID = "com.tblockmc.launcher"
   Version = "0.0.1"
   Build = 33

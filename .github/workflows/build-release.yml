@@ -39,8 +39,9 @@ jobs:
       run: go install fyne.io/tools/cmd/fyne@latest
 
     - name: Package
-      run:
-         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release
+      run: >
+         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
+         ls
 
     - name: Generate zip bundle
       run: zip tblockmc-win.zip tblockmc.exe
