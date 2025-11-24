@@ -40,7 +40,7 @@ jobs:
 
     - name: Package
       run:
-         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
+         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release
 
     - name: Generate zip bundle
       run: zip tblockmc-win.zip tblockmc.exe
