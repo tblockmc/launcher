@@ -43,6 +43,7 @@ jobs:
       - name: Package
         run: >
           fyne package -os darwin --icon Icon.png --release &&
+          codesign --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - "./TBlockMC.app/Contents/MacOS/tblock-launcher" &&
           ls
       
       - name: Create zip
@@ -94,17 +95,26 @@ jobs:
     - name: Package
       run: >
          fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
-         mv tblockmc.exe TBlockMC-windows-x64.exe
+         ls
+
+    - name: Create zip
+      run: zip TBlockMC-windows-x64.zip tblockmc.exe
 
     - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
         name: TBlockMC-windows-x64.exe
-        path: TBlockMC-windows-x64.exe
+        path: tblockmc.exe
+
+    - name: Upload zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: TBlockMC-windows-x64.zip
+        path: TBlockMC-windows-x64.zip
           
     - name: Release windows executable
       if: github.ref_type == 'tag'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ needs.create_release.outputs.tag-name }}
-        files: TBlockMC-windows-x64.exe
+        files: TBlockMC-windows-x64.zip

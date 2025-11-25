@@ -3,7 +3,7 @@
   Name = "tblockmc"
   ID = "com.tblockmc.launcher"
   Version = "0.0.1"
-  Build = 34
+  Build = 35
 
 [Development]
   HelperText = "This binary was built with debug symbols"
