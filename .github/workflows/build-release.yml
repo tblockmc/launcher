@@ -8,6 +8,38 @@ permissions:
   contents: write
 
 jobs:
+  build_macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install Fyne tool
+        run: go install fyne.io/tools/cmd/fyne@latest
+      
+      - name: Package
+        run: >
+          fyne package -os darwin --icon Icon.png --release &&
+          ls
+      
+      - name: Create zip
+        run: zip --symlinks -r TBlockMC.zip TBlockMC.app/
+      
+      - name: Upload zip archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: TBlockMC-mac-arm64.zip
+          path: TBlockMC.zip
+
   build_windows:
     runs-on: windows-latest
     defaults:
@@ -43,11 +75,8 @@ jobs:
          fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
          ls
 
-    - name: Generate zip bundle
-      run: zip tblockmc-win.zip tblockmc.exe
-
-    - name: Upload zip
+    - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
-        name: TblockMC_win_x64.exe
+        name: TBlockMC-windows-x64.exe
         path: tblockmc.exe
