@@ -7,6 +7,7 @@ on:
 permissions:
   contents: write
 
+# TODO: use matrix
 jobs:
   create_release:
     name: Create Release
@@ -45,13 +46,13 @@ jobs:
           ls
       
       - name: Create zip
-        run: zip --symlinks -r TBlockMC.zip TBlockMC.app/
+        run: zip --symlinks -r TBlockMC-mac-arm64.zip TBlockMC.app/
       
       - name: Upload zip archive
         uses: actions/upload-artifact@v4
         with:
           name: TBlockMC-mac-arm64.zip
-          path: TBlockMC.zip
+          path: TBlockMC-mac-arm64.zip
 
       - name: Release mac app
         if: github.ref_type == 'tag'
@@ -93,13 +94,13 @@ jobs:
     - name: Package
       run: >
          fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
-         ls
+         mv tblockmc.exe TBlockMC-windows-x64.exe
 
     - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
         name: TBlockMC-windows-x64.exe
-        path: tblockmc.exe
+        path: TBlockMC-windows-x64.exe
           
     - name: Release windows executable
       if: github.ref_type == 'tag'
