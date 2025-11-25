@@ -20,7 +20,7 @@ func main() {
 
 	gameDir, err := utils.GetTblockFolderPath()
 	if err != nil {
-		log.Fatal("Failed to determine game folder: ", err)
+		log.Fatal("failed to determine game folder: ", err)
 	}
 
 	cfg, err := launcher.ReadPersistedConfig(gameDir)
@@ -29,7 +29,10 @@ func main() {
 		cfg = launcher.NewConfig("", gameDir)
 	}
 
-	l := tblock.NewLauncher(cfg)
+	l, err := tblock.NewLauncher(cfg)
+	if err != nil {
+		log.Fatal("failed to start launcher: ", err)
+	}
 	defer func() {
 		err := launcher.PersistConfig(gameDir, l.Config)
 		if err != nil {

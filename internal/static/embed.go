@@ -1,6 +1,9 @@
 package static
 
-import _ "embed"
+import (
+	"embed"
+	_ "embed"
+)
 
 //go:embed options.txt
 var OptionsTXT []byte
@@ -13,3 +16,6 @@ var Background []byte
 
 //go:embed minecraft.ttf
 var Font []byte
+
+//go:embed translations
+var Translations embed.FS

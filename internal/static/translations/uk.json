@@ -1,0 +1,22 @@
+{
+    "Error": "Сталася помилка!",
+    "TBlockMC": "TBlockMC",
+    "Minecraft memory": "Пам'ять майнкрафту",
+    "Java path": "Шлях до Java",
+    "Settings": "Налаштування",
+    "Close": "Закрити",
+    "Enter your username": "Введи свій нікнейм",
+    "Getting version info...": "Запитуємо інформацію про версію...",
+    "Downloading Minecraft jar...": "Завантаження клієнта майнкрафт...",
+    "Downloading libraries...": "Завантаження необхідних бібліотек...",
+    "Downloading assets...": "Завантаження ресурсів...",
+    "Download fabric...": "Встановлюємо фабрік...",
+    "Downloading mods...": "Завантажуємо необхідні моди...",
+    "Writing static files...": "Налаштовуємо лаунчер...",
+    "Downloading Java...": "Встановлюємо джаву...",
+    "Successfully installed minecraft!": "Майнкрафт успішно встановлено!",
+    "Play!": "Старт",
+    "Download": "Завантажити",
+    "Running...": "Запущено...",
+    "Downloading...": "Завантаження..."
+}

@@ -2,7 +2,7 @@
   Icon = "Icon.png"
   Name = "tblockmc"
   ID = "com.tblockmc.launcher"
-  Version = "0.0.1"
+  Version = "0.1.0"
   Build = 35
 
 [Development]

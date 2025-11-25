@@ -21,6 +21,7 @@ jobs:
           name: ${{ github.ref_name }}
           draft: false
           prerelease: false
+          generate_release_notes: true
 
   build_macos:
     runs-on: macos-14
