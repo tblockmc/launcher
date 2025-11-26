@@ -7,7 +7,7 @@ import (
 
 // TODO: remove hard-coded versions
 const (
-	McVersion       = "1.21.4"
+	McVersion       = "1.21.8"
 	DefaultMemory   = "4G"
 	DefaultJavaPath = ""
 )

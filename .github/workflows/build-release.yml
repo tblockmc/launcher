@@ -41,11 +41,15 @@ jobs:
       - name: Install Fyne tool
         run: go install fyne.io/tools/cmd/fyne@latest
       
+      - name: Set version
+        run: |
+          TAG=${{ github.event.release.tag_name }} 
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+      
       - name: Package
-        run: >
-          fyne package -os darwin --icon Icon.png --release &&
-          codesign --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - "./TBlockMC.app/Contents/MacOS/tblock-launcher" &&
-          ls
+        run: |
+          fyne package -os darwin --app-version $VERSION --icon Icon.png --release
+          codesign --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - "./TBlockMC.app/Contents/MacOS/tblock-launcher"
       
       - name: Create zip
         run: zip --symlinks -r TBlockMC-mac-arm64.zip TBlockMC.app/
@@ -93,10 +97,14 @@ jobs:
     - name: Install Fyne tool
       run: go install fyne.io/tools/cmd/fyne@latest
 
+    - name: Set version
+      run: |
+        TAG=${{ github.event.release.tag_name }} 
+        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+      
     - name: Package
-      run: >
-         fyne package -os windows --icon Icon.png --executable tblockmc.exe --release &&
-         ls
+      run: |
+         CGO_LDFLAGS="-H=windowsgui" fyne package -os windows --icon Icon.png --executable tblockmc.exe --release
 
     - name: Create zip
       run: zip TBlockMC-windows-x64.zip tblockmc.exe

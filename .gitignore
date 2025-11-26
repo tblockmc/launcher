@@ -2,3 +2,4 @@ config
 fyne-cross
 logs
 TBlockMC.app
+.DS_Store

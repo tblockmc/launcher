@@ -3,6 +3,7 @@ package launcher
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,10 +12,11 @@ import (
 
 	"github.com/havrydotdev/tblock-launcher/pkg/auth"
 	"github.com/havrydotdev/tblock-launcher/pkg/downloader"
+	"github.com/havrydotdev/tblock-launcher/pkg/utils"
 )
 
 var (
-	fabricVersionName = fmt.Sprintf("fabric-loader-%s-%s", downloader.FabricLoaderVersion, "1.21.4")
+	fabricVersionName = fmt.Sprintf("fabric-loader-%s-%s", downloader.FabricLoaderVersion, utils.McVersion)
 )
 
 type FabricLauncher struct {
@@ -68,6 +70,8 @@ func (f *FabricLauncher) buildFabricCommand(versionName string) (*exec.Cmd, erro
 
 	allArgs := append(jvmArgs, gameArgs...)
 
+	log.Println(allArgs)
+
 	javaBinary := "java"
 	if runtime.GOOS == "windows" {
 		javaBinary = "java.exe"
@@ -96,7 +100,7 @@ func (f *FabricLauncher) loadFabricProfile(versionName string) (*downloader.Fabr
 func (f *FabricLauncher) buildFabricClasspath() (string, error) {
 	var classpathElements []string
 
-	mcJar := filepath.Join(f.Config.GameDir, "versions", "1.21.4", "1.21.4.jar")
+	mcJar := filepath.Join(f.Config.GameDir, "versions", utils.McVersion, fmt.Sprintf("%s.jar", utils.McVersion))
 	classpathElements = append(classpathElements, mcJar)
 
 	librariesDir := filepath.Join(f.Config.GameDir, "libraries")
@@ -121,17 +125,19 @@ func (f *FabricLauncher) buildFabricClasspath() (string, error) {
 		if err != nil {
 			return err
 		}
+
 		if !info.IsDir() && strings.HasSuffix(path, ".jar") {
 			classpathElements = append(classpathElements, path)
 		}
+
 		return nil
 	}); err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
 
 	fabricJar := filepath.Join(f.Config.GameDir, "versions",
-		fmt.Sprintf("fabric-loader-%s-%s", "0.18.1", f.Config.Version),
-		fmt.Sprintf("fabric-loader-%s-%s.jar", "0.18.1", f.Config.Version))
+		fmt.Sprintf("fabric-loader-%s-%s", downloader.FabricLoaderVersion, f.Config.Version),
+		fmt.Sprintf("fabric-loader-%s-%s.jar", downloader.FabricLoaderVersion, f.Config.Version))
 	if _, err := os.Stat(fabricJar); err == nil {
 		classpathElements = append(classpathElements, fabricJar)
 	}

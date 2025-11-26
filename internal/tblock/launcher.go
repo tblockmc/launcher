@@ -19,6 +19,9 @@ import (
 	"github.com/havrydotdev/tblock-launcher/internal/static"
 	"github.com/havrydotdev/tblock-launcher/pkg/downloader"
 	"github.com/havrydotdev/tblock-launcher/pkg/launcher"
+	"github.com/havrydotdev/tblock-launcher/pkg/utils"
+	"github.com/mouuff/go-rocket-update/pkg/provider"
+	"github.com/mouuff/go-rocket-update/pkg/updater"
 )
 
 type LauncherState int
@@ -26,6 +29,7 @@ type LauncherState int
 const (
 	Downloading LauncherState = iota
 	StartedClient
+	CanUpdate
 	ClientNotInstalled
 	Idle
 )
@@ -37,15 +41,17 @@ var (
 	}
 
 	mods = []downloader.ModData{
-		{Name: "fabric-api", URL: "https://cdn.modrinth.com/data/P7dR8mSH/versions/p96k10UR/fabric-api-0.119.4%2B1.21.4.jar"},
-		{Name: "sodium", URL: "https://cdn.modrinth.com/data/AANobbMI/versions/c3YkZvne/sodium-fabric-0.6.13%2Bmc1.21.4.jar"},
-		{Name: "simple-voice-chat", URL: "https://cdn.modrinth.com/data/9eGKb6K1/versions/5ODvTv8E/voicechat-fabric-1.21.4-2.6.6.jar"},
-		{Name: "modmenu", URL: "https://cdn.modrinth.com/data/mOgUt4GM/versions/7iGb2ltH/modmenu-13.0.3.jar"},
-		{Name: "zoomify", URL: "https://cdn.modrinth.com/data/w7ThoJFB/versions/RKRjd2h1/Zoomify-2.14.2%2B1.21.3.jar"},
-		{Name: "iris-shaders", URL: "https://cdn.modrinth.com/data/YL57xq9U/versions/Ca054sTe/iris-fabric-1.8.8%2Bmc1.21.4.jar"},
-		// limbs dont bend on 1.21.4 with sodium, update when fixed
-		{Name: "emotecraft", URL: "https://cdn.modrinth.com/data/pZ2wrerK/versions/njhJbosE/emotecraft-fabric-for-MC1.21.4-2.5.8.jar"},
-		{Name: "yet-another-configlib", URL: "https://cdn.modrinth.com/data/1eAoo2KR/versions/F67XvT8M/yet_another_config_lib_v3-3.8.0%2B1.21.4-fabric.jar"},
+		{Name: "fabric-api", URL: "https://cdn.modrinth.com/data/P7dR8mSH/versions/g58ofrov/fabric-api-0.136.1%2B1.21.8.jar"},
+		{Name: "sodium", URL: "https://cdn.modrinth.com/data/AANobbMI/versions/7pwil2dy/sodium-fabric-0.7.3%2Bmc1.21.8.jar"},
+		{Name: "simple-voice-chat", URL: "https://cdn.modrinth.com/data/9eGKb6K1/versions/2Z1g1v36/voicechat-fabric-1.21.8-2.6.6.jar"},
+		{Name: "modmenu", URL: "https://cdn.modrinth.com/data/mOgUt4GM/versions/am1Siv7F/modmenu-15.0.0.jar"},
+		{Name: "placeholder-api", URL: "https://cdn.modrinth.com/data/eXts2L7r/versions/1S1kjZ9W/placeholder-api-2.7.2%2B1.21.8.jar"},
+		{Name: "zoomify", URL: "https://cdn.modrinth.com/data/w7ThoJFB/versions/qMqviL3t/Zoomify-2.14.6%2B1.21.6.jar"},
+		{Name: "iris-shaders", URL: "https://cdn.modrinth.com/data/YL57xq9U/versions/Rhzf61g1/iris-fabric-1.9.6%2Bmc1.21.8.jar"},
+		{Name: "emotecraft", URL: "https://cdn.modrinth.com/data/pZ2wrerK/versions/VeMVR6lp/emotecraft-fabric-for-MC1.21.7-3.0.0-b.build.127.jar"},
+		{Name: "player-animation-lib", URL: "https://cdn.modrinth.com/data/ha1mEyJS/versions/xbjrgVCf/PlayerAnimationLibFabric-1.0.13%2Bmc.1.21.8.jar"},
+		{Name: "bendable-cuboids", URL: "https://cdn.modrinth.com/data/OI3FlFon/versions/mqKPHO6f/BendableCuboids-1.0.5%2Bmc1.21.7.jar"},
+		{Name: "yet-another-configlib", URL: "https://cdn.modrinth.com/data/1eAoo2KR/versions/WxYlHLu6/yet_another_config_lib_v3-3.7.1%2B1.21.6-fabric.jar"},
 		{Name: "fabric-language-kotlin", URL: "https://cdn.modrinth.com/data/Ha28R6CL/versions/LcgnDDmT/fabric-language-kotlin-1.13.7%2Bkotlin.2.2.21.jar"},
 	}
 
@@ -54,15 +60,19 @@ var (
 		ClientNotInstalled: "Download",
 		StartedClient:      "Running...",
 		Downloading:        "Downloading...",
+		CanUpdate:          "Update",
 	}
 )
 
 type Launcher struct {
-	Config *launcher.Config
-	core   *launcher.FabricLauncher
-	state  LauncherState
+	Config  *launcher.Config
+	version string
+	core    *launcher.FabricLauncher
+	state   LauncherState
 
 	w          fyne.Window
+	a          fyne.App
+	u          *updater.Updater
 	mainButton *widget.Button
 	settings   *dialog.CustomDialog
 	statusText binding.String
@@ -82,18 +92,42 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 		return nil, err
 	}
 
+	a.Settings().SetTheme(newTheme())
+
 	// hardcode ukrainian for now
 	err = lang.AddTranslationsForLocale(uk, lang.SystemLocale())
 	if err != nil {
 		return nil, err
 	}
 
-	a.Settings().SetTheme(newTheme())
-	w := a.NewWindow(lang.L("TBlockMC"))
+	version := a.Metadata().Version
+	if version == "" {
+		version = "dev-build"
+	}
+
+	u := &updater.Updater{
+		Provider: &provider.Github{
+			RepositoryURL: "github.com/tblockmc/launcher",
+			ArchiveName:   getReleaseArchive(),
+		},
+		ExecutableName: getBinaryName(),
+		Version:        fmt.Sprintf("v%s", version),
+	}
+
+	w := a.NewWindow(fmt.Sprintf("%s %s", lang.L("TBlockMC"), version))
 
 	state := Idle
 	if !core.IsFabricInstalled() {
 		state = ClientNotInstalled
+	}
+
+	canUpdate, err := u.CanUpdate()
+	if err != nil {
+		w.SetTitle(err.Error())
+	}
+
+	if canUpdate {
+		state = CanUpdate
 	}
 
 	mainBtnText := binding.NewString()
@@ -102,9 +136,10 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 	statusText := binding.NewString()
 
 	return &Launcher{
-		state: state, w: w,
+		state: state, w: w, u: u, a: a,
 		core: core, Config: cfg,
 		statusText: statusText,
+		version:    version,
 	}, nil
 }
 
@@ -216,6 +251,20 @@ func (l *Launcher) showError(err error) {
 func (l *Launcher) buildMainButton() *widget.Button {
 	return widget.NewButton(lang.L(mainBtnTexts[l.state]), func() {
 		switch l.state {
+		case CanUpdate:
+			l.setState(Downloading)
+
+			go func() {
+				if l.version != "dev-build" {
+					if _, err := l.u.Update(); err != nil {
+						l.showError(err)
+					} else {
+						l.a.Quit()
+					}
+				}
+
+				l.setState(Idle)
+			}()
 		case ClientNotInstalled:
 			go func() {
 				fyne.Do(func() { l.setState(Downloading) })
@@ -281,7 +330,7 @@ func (l *Launcher) install() error {
 	}
 
 	l.statusText.Set(lang.L("Download fabric..."))
-	if err := fabricInstaller.InstallFabric("1.21.4"); err != nil {
+	if err := fabricInstaller.InstallFabric(utils.McVersion); err != nil {
 		return fmt.Errorf("failed to download fabric: %s", err)
 	}
 
