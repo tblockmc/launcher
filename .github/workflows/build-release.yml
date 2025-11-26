@@ -106,7 +106,7 @@ jobs:
       
     - name: Package
       run: |
-         CGO_LDFLAGS="-H=windowsgui" fyne package -os windows --app-version ${VERSION:-9.9.9} --icon Icon.png --executable tblockmc.exe --release
+         fyne package -os windows --app-version ${VERSION:-9.9.9} --icon Icon.png --executable tblockmc.exe --release
 
     - name: Create zip
       run: zip TBlockMC-windows-x64.zip tblockmc.exe
