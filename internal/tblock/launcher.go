@@ -101,10 +101,6 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 	}
 
 	version := a.Metadata().Version
-	if version == "" {
-		version = "dev-build"
-	}
-
 	u := &updater.Updater{
 		Provider: &provider.Github{
 			RepositoryURL: "github.com/tblockmc/launcher",
@@ -126,7 +122,8 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 		w.SetTitle(err.Error())
 	}
 
-	if canUpdate {
+	// hack: dev build version
+	if canUpdate && version != "9.9.9" {
 		state = CanUpdate
 	}
 
