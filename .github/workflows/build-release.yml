@@ -43,7 +43,7 @@ jobs:
       
       - name: Set version
         run: |
-          TAG=${{ github.event.release.tag_name }} 
+          TAG=${{ github.ref_name }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       
       - name: Package
@@ -99,7 +99,7 @@ jobs:
 
     - name: Set version
       run: |
-        TAG=${{ github.event.release.tag_name }} 
+        TAG=${{ github.ref_name }}
         echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       
     - name: Package
