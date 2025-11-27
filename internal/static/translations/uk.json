@@ -1,8 +1,9 @@
 {
     "Error": "Сталася помилка!",
     "TBlockMC": "TBlockMC",
-    "Minecraft memory": "Пам'ять майнкрафту",
     "Java path": "Шлях до Java",
+    "Minecraft memory": "Пам'ять майнкрафту",
+    "JVM arguments": "Додаткові параметри Jvm",
     "Settings": "Налаштування",
     "Close": "Закрити",
     "Enter your username": "Введи свій нікнейм",
@@ -18,5 +19,6 @@
     "Play!": "Старт",
     "Download": "Завантажити",
     "Running...": "Запущено...",
-    "Downloading...": "Завантаження..."
+    "Downloading...": "Завантаження...",
+    "Update": "Оновити"
 }

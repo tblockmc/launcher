@@ -40,6 +40,7 @@ func (f *FabricLauncher) Launch() error {
 	}
 
 	cmd.Dir = f.Config.GameDir
+	cmd.Stdout = os.Stdout
 
 	fmt.Printf("Launching Minecraft with Fabric %s...\n", downloader.FabricLoaderVersion)
 	return cmd.Run()
@@ -70,14 +71,14 @@ func (f *FabricLauncher) buildFabricCommand(versionName string) (*exec.Cmd, erro
 
 	allArgs := append(jvmArgs, gameArgs...)
 
-	log.Println(allArgs)
-
 	javaBinary := "java"
 	if runtime.GOOS == "windows" {
 		javaBinary = "java.exe"
 	}
 
 	javaExec := filepath.Join(f.Config.JavaPath, javaBinary)
+
+	log.Println(javaExec, allArgs)
 
 	return exec.Command(javaExec, allArgs...), nil
 }
@@ -154,16 +155,19 @@ func (f *FabricLauncher) buildFabricJVMArgs(profile *downloader.FabricProfile, c
 		"-Dorg.lwjgl.system.SharedLibraryExtractPath=" + natives,
 		"-Dio.netty.native.workdir=" + natives,
 		"-Dminecraft.launcher.brand=tblock",
-		"-Dminecraft.launcher.version=0.0.1",
+		// TODO
+		"-Dminecraft.launcher.version=0.2.1",
 		"-cp", classpath,
 	}
 
-	// Add macOS flag if needed
+	if f.Config.JvmArgs != "" {
+		args = append(args, f.Config.JvmArgs)
+	}
+
 	if runtime.GOOS == "darwin" {
 		args = append(args, "-XstartOnFirstThread")
 	}
 
-	// Add JVM arguments from Fabric profile
 	for _, arg := range profile.Arguments.JVM {
 		if strArg, ok := arg.(string); ok {
 			resolvedArg := f.resolvePlaceholders(strArg)

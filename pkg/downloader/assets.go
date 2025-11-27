@@ -12,14 +12,21 @@ import (
 
 const ConcurrentDownloads = 10
 
+type ResourceType int
+
+const (
+	ResourcePack ResourceType = iota
+	Mod
+)
+
+type ResouceData struct {
+	Type ResourceType
+	URL  string
+}
+
 type StaticAsset struct {
 	Path string
 	Data []byte
-}
-
-type ModData struct {
-	Name string
-	URL  string
 }
 
 type AssetIndex struct {

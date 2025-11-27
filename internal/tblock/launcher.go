@@ -35,24 +35,25 @@ const (
 )
 
 var (
-	statics = []downloader.StaticAsset{
+	overrides = []downloader.StaticAsset{
 		{Path: "options.txt", Data: static.OptionsTXT},
 		{Path: "servers.dat", Data: static.ServersDAT},
 	}
 
-	mods = []downloader.ModData{
-		{Name: "fabric-api", URL: "https://cdn.modrinth.com/data/P7dR8mSH/versions/g58ofrov/fabric-api-0.136.1%2B1.21.8.jar"},
-		{Name: "sodium", URL: "https://cdn.modrinth.com/data/AANobbMI/versions/7pwil2dy/sodium-fabric-0.7.3%2Bmc1.21.8.jar"},
-		{Name: "simple-voice-chat", URL: "https://cdn.modrinth.com/data/9eGKb6K1/versions/2Z1g1v36/voicechat-fabric-1.21.8-2.6.6.jar"},
-		{Name: "modmenu", URL: "https://cdn.modrinth.com/data/mOgUt4GM/versions/am1Siv7F/modmenu-15.0.0.jar"},
-		{Name: "placeholder-api", URL: "https://cdn.modrinth.com/data/eXts2L7r/versions/1S1kjZ9W/placeholder-api-2.7.2%2B1.21.8.jar"},
-		{Name: "zoomify", URL: "https://cdn.modrinth.com/data/w7ThoJFB/versions/qMqviL3t/Zoomify-2.14.6%2B1.21.6.jar"},
-		{Name: "iris-shaders", URL: "https://cdn.modrinth.com/data/YL57xq9U/versions/Rhzf61g1/iris-fabric-1.9.6%2Bmc1.21.8.jar"},
-		{Name: "emotecraft", URL: "https://cdn.modrinth.com/data/pZ2wrerK/versions/VeMVR6lp/emotecraft-fabric-for-MC1.21.7-3.0.0-b.build.127.jar"},
-		{Name: "player-animation-lib", URL: "https://cdn.modrinth.com/data/ha1mEyJS/versions/xbjrgVCf/PlayerAnimationLibFabric-1.0.13%2Bmc.1.21.8.jar"},
-		{Name: "bendable-cuboids", URL: "https://cdn.modrinth.com/data/OI3FlFon/versions/mqKPHO6f/BendableCuboids-1.0.5%2Bmc1.21.7.jar"},
-		{Name: "yet-another-configlib", URL: "https://cdn.modrinth.com/data/1eAoo2KR/versions/WxYlHLu6/yet_another_config_lib_v3-3.7.1%2B1.21.6-fabric.jar"},
-		{Name: "fabric-language-kotlin", URL: "https://cdn.modrinth.com/data/Ha28R6CL/versions/LcgnDDmT/fabric-language-kotlin-1.13.7%2Bkotlin.2.2.21.jar"},
+	resources = []downloader.ResouceData{
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/P7dR8mSH/versions/g58ofrov/fabric-api-0.136.1%2B1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/AANobbMI/versions/7pwil2dy/sodium-fabric-0.7.3%2Bmc1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/9eGKb6K1/versions/2Z1g1v36/voicechat-fabric-1.21.8-2.6.6.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/mOgUt4GM/versions/am1Siv7F/modmenu-15.0.0.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/eXts2L7r/versions/1S1kjZ9W/placeholder-api-2.7.2%2B1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/w7ThoJFB/versions/qMqviL3t/Zoomify-2.14.6%2B1.21.6.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/YL57xq9U/versions/Rhzf61g1/iris-fabric-1.9.6%2Bmc1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/pZ2wrerK/versions/VeMVR6lp/emotecraft-fabric-for-MC1.21.7-3.0.0-b.build.127.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/ha1mEyJS/versions/xbjrgVCf/PlayerAnimationLibFabric-1.0.13%2Bmc.1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/OI3FlFon/versions/mqKPHO6f/BendableCuboids-1.0.5%2Bmc1.21.7.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/1eAoo2KR/versions/WxYlHLu6/yet_another_config_lib_v3-3.7.1%2B1.21.6-fabric.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/Ha28R6CL/versions/LcgnDDmT/fabric-language-kotlin-1.13.7%2Bkotlin.2.2.21.jar"},
+		{Type: downloader.ResourcePack, URL: "https://cdn.modrinth.com/data/Gb6yKz1h/versions/6H8Fw7l1/trahopack.zip"},
 	}
 
 	mainBtnTexts = map[LauncherState]string{
@@ -64,6 +65,7 @@ var (
 	}
 )
 
+// TODO: refactor to not be so cluttered
 type Launcher struct {
 	Config  *launcher.Config
 	version string
@@ -123,7 +125,7 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 	}
 
 	// hack: dev build version
-	if canUpdate && version != "9.9.9" {
+	if canUpdate && version != "9.9.9" && version != "" {
 		state = CanUpdate
 	}
 
@@ -173,12 +175,20 @@ func (l *Launcher) buildSettingsDialog() *dialog.CustomDialog {
 		l.Config.Memory = memory
 	}
 
+	jvmArgsLabel := widget.NewLabel(lang.L("JVM arguments"))
+	jvmArgsInput := widget.NewEntry()
+	jvmArgsInput.SetText(l.Config.JvmArgs)
+	jvmArgsInput.OnChanged = func(jvmArgs string) {
+		l.Config.JvmArgs = jvmArgs
+	}
+
 	return dialog.NewCustom(lang.L("Settings"), lang.L("Close"),
 		container.NewVBox(
 			layout.NewSpacer(),
 			container.New(layout.NewFormLayout(),
 				javaPathInputLabel, javaPathInput,
 				memoryInputLabel, memoryInput,
+				jvmArgsLabel, jvmArgsInput,
 			),
 			layout.NewSpacer(),
 		), l.w,
@@ -332,12 +342,12 @@ func (l *Launcher) install() error {
 	}
 
 	l.statusText.Set(lang.L("Downloading mods..."))
-	if err := d.DownloadMods(mods); err != nil {
+	if err := d.DownloadResouces(resources); err != nil {
 		return fmt.Errorf("failed to download mods: %s", err)
 	}
 
 	l.statusText.Set(lang.L("Writing static files..."))
-	if err := d.WriteStaticFiles(statics); err != nil {
+	if err := d.WriteOverrides(overrides); err != nil {
 		return fmt.Errorf("failed to write static files: %s", err)
 	}
 

@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -45,15 +46,29 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
 	return nil
 }
 
-func (d *Downloader) DownloadMods(mods []ModData) error {
+// dowloads mods & resoucepacks
+func (d *Downloader) DownloadResouces(resources []ResouceData) error {
 	modsDir := path.Join(d.gameDir, "mods")
 	err := os.Mkdir(modsDir, 0755)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
 
-	for _, mod := range mods {
-		err := d.download(mod.URL, path.Join(modsDir, mod.Name+".jar"))
+	packsDir := path.Join(d.gameDir, "resourcepacks")
+	err = os.Mkdir(packsDir, 0755)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+
+	paths := map[ResourceType]string{
+		Mod:          modsDir,
+		ResourcePack: packsDir,
+	}
+
+	for _, r := range resources {
+		dir := paths[r.Type]
+		name := path.Base(r.URL)
+		err := d.download(r.URL, path.Join(dir, name))
 		if err != nil {
 			return err
 		}
@@ -84,8 +99,8 @@ func (d *Downloader) shouldDownloadLibrary(library types.Library) bool {
 	return true
 }
 
-func (d *Downloader) WriteStaticFiles(static []StaticAsset) error {
-	for _, s := range static {
+func (d *Downloader) WriteOverrides(overrides []StaticAsset) error {
+	for _, s := range overrides {
 		filePath := path.Join(d.gameDir, s.Path)
 		file, err := os.Create(filePath)
 		if err != nil {

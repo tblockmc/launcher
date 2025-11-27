@@ -16,12 +16,13 @@ type Config struct {
 	Username string `json:"username"`
 	GameDir  string `json:"game_dir"`
 	Version  string `json:"version"`
+	JvmArgs  string `json:"jvm_args"`
 }
 
 func NewConfig(username, gameDir string) *Config {
 	return &Config{
-		JavaPath: utils.DefaultJavaPath, Memory: utils.DefaultMemory,
 		Username: username, GameDir: gameDir, Version: utils.McVersion,
+		JavaPath: utils.DefaultJavaPath, Memory: utils.DefaultMemory, JvmArgs: "",
 	}
 }
 
