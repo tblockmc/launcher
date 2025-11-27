@@ -50,6 +50,7 @@ jobs:
       - name: Package
         run: |
           fyne package -os darwin --app-version ${VERSION:-9.9.9} --icon Icon.png --release
+          cp build/darwin/Info.plist TBlockMC.app/Contents/Info.plist
           codesign --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - "./TBlockMC.app/Contents/MacOS/tblock-launcher"
       
       - name: Create zip
