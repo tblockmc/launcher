@@ -2,7 +2,11 @@ package tblock
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"runtime"
 
 	"fyne.io/fyne/v2"
@@ -55,4 +59,22 @@ func ReadPersistedConfigOrDefault(app fyne.App) (*config.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func buildLogger(w io.Writer) *slog.Logger {
+	return slog.New(slog.NewTextHandler(w, nil))
+}
+
+func getLogWriter(gameDir string, isDev bool) io.Writer {
+	if isDev {
+		return os.Stdout
+	}
+
+	file, err := os.OpenFile(filepath.Join(gameDir, "tblock.log"), os.O_RDWR, os.ModeAppend)
+	if err != nil {
+		log.Println("failed to open log file: ", err)
+		return os.Stdout
+	}
+
+	return file
 }

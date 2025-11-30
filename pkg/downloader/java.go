@@ -6,7 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -40,7 +40,7 @@ func (d *Downloader) GetJavaPath() string {
 
 func (d *Downloader) DownloadJava() error {
 	javaURL := d.getJavaDownloadURL()
-	log.Println(javaURL)
+	d.log.Info("downloading java", slog.String("url", javaURL))
 	if javaURL == "" {
 		return fmt.Errorf("unsupported platform: %s %s", runtime.GOOS, runtime.GOARCH)
 	}

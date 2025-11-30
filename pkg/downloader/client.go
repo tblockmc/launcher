@@ -3,6 +3,7 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -81,7 +82,7 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
 
 		libraryPath := filepath.Join(librariesPath, artifact.Path)
 
-		fmt.Printf("[%d/%d] Downloading library: %s\n", i+1, len(libraries), artifact.Path)
+		d.log.Info("downloading library", slog.Int("progress", i+1), slog.Int("total", len(libraries)), slog.String("name", artifact.Path))
 
 		if err := d.downloadWithChecksum(artifact.URL, libraryPath, artifact.SHA1); err != nil {
 			return fmt.Errorf("failed to download library %s: %v", library.Name, err)

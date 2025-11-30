@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"log/slog"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -55,6 +56,11 @@ var (
 		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/OI3FlFon/versions/mqKPHO6f/BendableCuboids-1.0.5%2Bmc1.21.7.jar"},
 		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/1eAoo2KR/versions/WxYlHLu6/yet_another_config_lib_v3-3.7.1%2B1.21.6-fabric.jar"},
 		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/Ha28R6CL/versions/LcgnDDmT/fabric-language-kotlin-1.13.7%2Bkotlin.2.2.21.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/yBW8D80W/versions/foMsxsVt/lambdynamiclights-4.8.6%2B1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/m5T5xmUy/versions/2C7y66BK/BetterGrassify-1.8.2%2Bfabric.1.21.10.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/PtjYWJkn/versions/Of25zuEG/sodium-extra-fabric-0.7.0%2Bmc1.21.8.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/Bh37bMuy/versions/AgGRyydH/reeses-sodium-options-fabric-1.8.4%2Bmc1.21.6.jar"},
+		{Type: downloader.Mod, URL: "https://cdn.modrinth.com/data/uXXizFIs/versions/CtMpt7Jr/ferritecore-8.0.0-fabric.jar"},
 		{Type: downloader.ResourcePack, URL: "https://cdn.modrinth.com/data/Gb6yKz1h/versions/6H8Fw7l1/trahopack.zip"},
 	}
 
@@ -74,6 +80,8 @@ type Launcher struct {
 	version string
 	core    *launcher.FabricLauncher
 	state   LauncherState
+	isDev   bool
+	log     *slog.Logger
 
 	w          fyne.Window
 	a          fyne.App
@@ -86,7 +94,7 @@ type Launcher struct {
 func NewLauncher() (*Launcher, error) {
 	err := discord.Login()
 	if err != nil {
-		log.Println("discord login failed: ", err)
+		log.Println("discord login failed", err)
 	}
 
 	a := app.NewWithID("com.github.tblockmc.launcher")
@@ -111,6 +119,8 @@ func NewLauncher() (*Launcher, error) {
 	}
 
 	version := a.Metadata().Version
+	isDev := version == "0.0.1" || version == ""
+
 	u := &updater.Updater{
 		Provider: &provider.Github{
 			RepositoryURL: "github.com/tblockmc/launcher",
@@ -133,7 +143,7 @@ func NewLauncher() (*Launcher, error) {
 	}
 
 	// hack: dev build version
-	if canUpdate && version != "0.0.1" && version != "" {
+	if canUpdate && !isDev {
 		state = CanUpdate
 	}
 
@@ -146,18 +156,23 @@ func NewLauncher() (*Launcher, error) {
 
 	statusText := binding.NewString()
 
+	logWriter := getLogWriter(cfg.GameDir, isDev)
+	logger := buildLogger(logWriter)
+	slog.SetDefault(logger)
+
 	return &Launcher{
-		state: state, w: w, u: u, a: a,
-		core: core, cfg: cfg,
-		statusText: statusText,
 		version:    version,
+		statusText: statusText,
+		state:      state, w: w, u: u, a: a,
+		core: core, cfg: cfg, isDev: isDev,
+		log: logger,
 	}, nil
 }
 
 func (l *Launcher) Run() {
 	err := discord.SetIdleActivity()
 	if err != nil {
-		log.Println("failed to set discord idle activity: ", err)
+		l.log.Info("failed to set discord idle activity: ", slog.String("error", err.Error()))
 	}
 
 	l.buildUI()
@@ -274,12 +289,10 @@ func (l *Launcher) buildMainButton() *widget.Button {
 			l.setState(Downloading)
 
 			go func() {
-				if l.version != "dev-build" {
-					if _, err := l.u.Update(); err != nil {
-						l.showError(err)
-					} else {
-						l.a.Quit()
-					}
+				if _, err := l.u.Update(); err != nil {
+					l.showError(err)
+				} else {
+					l.a.Quit()
 				}
 
 				l.setState(Idle)
@@ -312,7 +325,7 @@ func (l *Launcher) buildMainButton() *widget.Button {
 
 			err := discord.SetPlayingActivity()
 			if err != nil {
-				log.Println("failed to set playing activity: ", err)
+				l.log.Warn("failed to set playing activity", slog.String("error", err.Error()))
 			}
 
 			go func() {
@@ -330,7 +343,7 @@ func (l *Launcher) buildMainButton() *widget.Button {
 }
 
 func (l *Launcher) updateResources() error {
-	d := downloader.New(l.cfg)
+	d := downloader.New(l.cfg).WithLogger(l.log)
 	if utils.McVersion != l.cfg.Versions.Minecraft || utils.FabricLoaderVersion != l.cfg.Versions.FabricLoader {
 		err := d.DeleteVersion()
 		if err != nil {
@@ -385,7 +398,7 @@ func (l *Launcher) updateResources() error {
 }
 
 func (l *Launcher) install() error {
-	d := downloader.New(l.cfg)
+	d := downloader.New(l.cfg).WithLogger(l.log)
 
 	l.statusText.Set(lang.L("Getting version info..."))
 	versionURL, err := d.GetVersionURL()

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,7 +37,7 @@ func (d *Downloader) InstallFabric() error {
 	mcVersion := d.cfg.Versions.Minecraft
 	loaderVersion := d.cfg.Versions.FabricLoader
 
-	fmt.Printf("Installing Fabric %s for Minecraft %s\n", loaderVersion, mcVersion)
+	d.log.Info("installing fabric", slog.String("loader_version", loaderVersion), slog.String("mc_version", mcVersion))
 
 	versionName := fmt.Sprintf("fabric-loader-%s-%s", loaderVersion, mcVersion)
 	versionDir := filepath.Join(d.cfg.GameDir, "versions", versionName)
@@ -77,7 +77,7 @@ func (d *Downloader) InstallFabric() error {
 		return err
 	}
 
-	fmt.Printf("Fabric installed: %s\n", versionName)
+	d.log.Info("installed fabric", slog.String("version", versionName))
 	return nil
 }
 
@@ -94,7 +94,7 @@ func (d *Downloader) downloadFabricLibrary(library FabricLibrary) error {
 	path := d.mavenToPath(library.Name)
 	url := d.mavenToURL(library.Name)
 
-	log.Printf("Downloading fabric library: %s", library.Name)
+	d.log.Info("downloading fabric library", slog.String("name", library.Name))
 
 	libraryPath := filepath.Join(d.cfg.GameDir, "libraries", path)
 

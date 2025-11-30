@@ -3,6 +3,7 @@ package downloader
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -139,7 +140,7 @@ func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex) error {
 	var downloaded, skipped, failed int
 	for result := range results {
 		if result.Error != nil {
-			fmt.Printf("Failed to download %s: %v\n", result.Name, result.Error)
+			d.log.Error("failed to download asset", slog.String("name", result.Name), slog.String("error", result.Error.Error()))
 			failed++
 		} else if result.Skipped {
 			skipped++
@@ -149,12 +150,11 @@ func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex) error {
 
 		total := downloaded + skipped + failed
 		if total%100 == 0 {
-			fmt.Printf("Progress: %d/%d assets (downloaded: %d, skipped: %d, failed: %d)\n",
-				total, len(assetIndex.Objects), downloaded, skipped, failed)
+			d.log.Info("successfully downloaded asset", slog.Int("progress", total),
+				slog.Int("total", len(assetIndex.Objects)), slog.Int("downloaded", downloaded),
+				slog.Int("skipped", skipped), slog.Int("failed", failed))
 		}
 	}
-
-	fmt.Printf("Asset download complete: %d downloaded, %d skipped, %d failed\n", downloaded, skipped, failed)
 
 	if failed > 0 {
 		return fmt.Errorf("%d assets failed to download", failed)

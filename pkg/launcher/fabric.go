@@ -100,7 +100,7 @@ func (f *FabricLauncher) loadFabricProfile(versionName string) (*downloader.Fabr
 func (f *FabricLauncher) buildFabricClasspath() (string, error) {
 	var classpathElements []string
 
-	mcJar := filepath.Join(f.cfg.GameDir, "versions", utils.McVersion, fmt.Sprintf("%s.jar", utils.McVersion))
+	mcJar := filepath.Join(f.cfg.GameDir, "versions", utils.McVersion, "minecraft.jar")
 	classpathElements = append(classpathElements, mcJar)
 
 	librariesDir := filepath.Join(f.cfg.GameDir, "libraries")

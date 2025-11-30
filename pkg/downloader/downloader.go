@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -15,14 +16,20 @@ import (
 type Downloader struct {
 	client *http.Client
 	cfg    *config.Config
+	log    *slog.Logger
 }
 
 func New(cfg *config.Config) *Downloader {
-	return &Downloader{cfg: cfg, client: http.DefaultClient}
+	return &Downloader{cfg: cfg, client: http.DefaultClient, log: slog.Default()}
 }
 
 func (d *Downloader) WithHTTPClient(client *http.Client) *Downloader {
 	d.client = client
+	return d
+}
+
+func (d *Downloader) WithLogger(log *slog.Logger) *Downloader {
+	d.log = log
 	return d
 }
 
@@ -32,7 +39,7 @@ func (d *Downloader) download(url, filepath string) error {
 	}
 
 	if info, err := os.Stat(filepath); err == nil && info.Size() > 0 {
-		fmt.Printf("File already exists: %s\n", filepath)
+		d.log.Warn("file already exists", slog.String("path", filepath))
 		return nil
 	}
 
