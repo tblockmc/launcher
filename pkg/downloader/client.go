@@ -11,14 +11,59 @@ import (
 	"github.com/havrydotdev/tblock-launcher/pkg/types"
 )
 
+func (d *Downloader) DeleteModsAndResourcepacks() error {
+	err := os.RemoveAll(filepath.Join(d.cfg.GameDir, "mods"))
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(filepath.Join(d.cfg.GameDir, "resourcepacks"))
+}
+
+func (d *Downloader) DeleteVersion() error {
+	err := os.Remove(d.getClientPath())
+	if err != nil {
+		return err
+	}
+
+	err = os.RemoveAll(d.getLibrariesPath())
+	if err != nil {
+		return err
+	}
+
+	err = os.RemoveAll(d.getAssetsPath())
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(d.getNativesPath())
+}
+
+func (d *Downloader) getClientPath() string {
+	return filepath.Join(d.cfg.GameDir, "versions", d.cfg.Versions.Minecraft, "minecraft.jar")
+}
+
+func (d *Downloader) getAssetsPath() string {
+	return filepath.Join(d.cfg.GameDir, "assets")
+}
+
+func (d *Downloader) getLibrariesPath() string {
+	return filepath.Join(d.cfg.GameDir, "libraries")
+}
+
+func (d *Downloader) getNativesPath() string {
+	return filepath.Join(d.cfg.GameDir, "natives")
+}
+
 func (d *Downloader) DownloadClient(details *types.VersionDetails) error {
 	client := details.Downloads.Client
-	clientPath := filepath.Join(d.gameDir, "versions", details.ID, details.ID+".jar")
+	clientPath := d.getClientPath()
 
 	return d.downloadWithChecksum(client.URL, clientPath, client.SHA1)
 }
 
 func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
+	librariesPath := d.getLibrariesPath()
 	for i, library := range libraries {
 		if !d.shouldDownloadLibrary(library) {
 			continue
@@ -29,14 +74,14 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
 			continue
 		}
 
-		// hack, fabric required another version of asm
+		// hack, fabric requires another version of asm
 		if filepath.Base(artifact.Path) == "asm-9.6.jar" {
 			continue
 		}
 
-		libraryPath := filepath.Join(d.gameDir, "libraries", artifact.Path)
+		libraryPath := filepath.Join(librariesPath, artifact.Path)
 
-		fmt.Fprintf(d.stdout, "[%d/%d] Downloading library: %s\n", i+1, len(libraries), filepath.Base(libraryPath))
+		fmt.Printf("[%d/%d] Downloading library: %s\n", i+1, len(libraries), artifact.Path)
 
 		if err := d.downloadWithChecksum(artifact.URL, libraryPath, artifact.SHA1); err != nil {
 			return fmt.Errorf("failed to download library %s: %v", library.Name, err)
@@ -48,13 +93,13 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
 
 // dowloads mods & resoucepacks
 func (d *Downloader) DownloadResouces(resources []ResouceData) error {
-	modsDir := path.Join(d.gameDir, "mods")
+	modsDir := path.Join(d.cfg.GameDir, "mods")
 	err := os.Mkdir(modsDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
 
-	packsDir := path.Join(d.gameDir, "resourcepacks")
+	packsDir := path.Join(d.cfg.GameDir, "resourcepacks")
 	err = os.Mkdir(packsDir, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
@@ -101,7 +146,7 @@ func (d *Downloader) shouldDownloadLibrary(library types.Library) bool {
 
 func (d *Downloader) WriteOverrides(overrides []StaticAsset) error {
 	for _, s := range overrides {
-		filePath := path.Join(d.gameDir, s.Path)
+		filePath := path.Join(d.cfg.GameDir, s.Path)
 		file, err := os.Create(filePath)
 		if err != nil {
 			return err

@@ -11,14 +11,6 @@ import (
 	"strings"
 )
 
-const (
-	FabricLoaderVersion = "0.18.1"
-)
-
-type FabricInstaller struct {
-	GameDir string
-}
-
 type FabricVersion struct {
 	Loader struct {
 		Version string `json:"version"`
@@ -41,24 +33,19 @@ type FabricLibrary struct {
 	URL  string `json:"url,omitempty"`
 }
 
-func NewFabricInstaller(gameDir string) *FabricInstaller {
-	return &FabricInstaller{
-		GameDir: gameDir,
-	}
-}
+func (d *Downloader) InstallFabric() error {
+	mcVersion := d.cfg.Versions.Minecraft
+	loaderVersion := d.cfg.Versions.FabricLoader
 
-func (f *FabricInstaller) InstallFabric(minecraftVersion string) error {
-	fmt.Printf("Installing Fabric %s for Minecraft %s\n", FabricLoaderVersion, minecraftVersion)
+	fmt.Printf("Installing Fabric %s for Minecraft %s\n", loaderVersion, mcVersion)
 
-	versionName := fmt.Sprintf("fabric-loader-%s-%s", FabricLoaderVersion, minecraftVersion)
-	versionDir := filepath.Join(f.GameDir, "versions", versionName)
+	versionName := fmt.Sprintf("fabric-loader-%s-%s", loaderVersion, mcVersion)
+	versionDir := filepath.Join(d.cfg.GameDir, "versions", versionName)
 	if err := os.MkdirAll(versionDir, 0755); err != nil {
 		return err
 	}
 
-	profileURL := fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json",
-		minecraftVersion, FabricLoaderVersion)
-
+	profileURL := fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", mcVersion, loaderVersion)
 	resp, err := http.Get(profileURL)
 	if err != nil {
 		return err
@@ -86,7 +73,7 @@ func (f *FabricInstaller) InstallFabric(minecraftVersion string) error {
 		return err
 	}
 
-	if err := f.downloadFabricLibraries(profile.Libraries); err != nil {
+	if err := d.downloadFabricLibraries(profile.Libraries); err != nil {
 		return err
 	}
 
@@ -94,22 +81,22 @@ func (f *FabricInstaller) InstallFabric(minecraftVersion string) error {
 	return nil
 }
 
-func (f *FabricInstaller) downloadFabricLibraries(libraries []FabricLibrary) error {
+func (d *Downloader) downloadFabricLibraries(libraries []FabricLibrary) error {
 	for _, library := range libraries {
-		if err := f.downloadLibrary(library); err != nil {
+		if err := d.downloadFabricLibrary(library); err != nil {
 			return fmt.Errorf("failed to download library %s: %v", library.Name, err)
 		}
 	}
 	return nil
 }
 
-func (f *FabricInstaller) downloadLibrary(library FabricLibrary) error {
-	path := f.mavenToPath(library.Name)
-	url := f.mavenToURL(library.Name)
+func (d *Downloader) downloadFabricLibrary(library FabricLibrary) error {
+	path := d.mavenToPath(library.Name)
+	url := d.mavenToURL(library.Name)
 
 	log.Printf("Downloading fabric library: %s", library.Name)
 
-	libraryPath := filepath.Join(f.GameDir, "libraries", path)
+	libraryPath := filepath.Join(d.cfg.GameDir, "libraries", path)
 
 	if err := os.MkdirAll(filepath.Dir(libraryPath), 0755); err != nil {
 		return err
@@ -135,12 +122,12 @@ func (f *FabricInstaller) downloadLibrary(library FabricLibrary) error {
 	return err
 }
 
-func (f *FabricInstaller) mavenToPath(name string) string {
+func (d *Downloader) mavenToPath(name string) string {
 	parts := splitMavenName(name)
 	return filepath.Join(parts[0], parts[1], parts[2], parts[1]+"-"+parts[2]+".jar")
 }
 
-func (f *FabricInstaller) mavenToURL(name string) string {
+func (d *Downloader) mavenToURL(name string) string {
 	parts := splitMavenName(name)
 	baseURL := "https://maven.fabricmc.net/"
 	return baseURL + parts[0] + "/" + parts[1] + "/" + parts[2] + "/" + parts[1] + "-" + parts[2] + ".jar"
@@ -154,5 +141,6 @@ func splitMavenName(name string) []string {
 		parts[1] = split1[1]
 		parts[2] = split1[2]
 	}
+
 	return parts
 }

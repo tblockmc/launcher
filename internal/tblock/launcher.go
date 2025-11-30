@@ -17,9 +17,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/havrydotdev/tblock-launcher/internal/discord"
 	"github.com/havrydotdev/tblock-launcher/internal/static"
+	"github.com/havrydotdev/tblock-launcher/internal/utils"
+	"github.com/havrydotdev/tblock-launcher/pkg/config"
 	"github.com/havrydotdev/tblock-launcher/pkg/downloader"
 	"github.com/havrydotdev/tblock-launcher/pkg/launcher"
-	"github.com/havrydotdev/tblock-launcher/pkg/utils"
 	"github.com/mouuff/go-rocket-update/pkg/provider"
 	"github.com/mouuff/go-rocket-update/pkg/updater"
 )
@@ -27,11 +28,12 @@ import (
 type LauncherState int
 
 const (
-	Downloading LauncherState = iota
-	StartedClient
+	Idle LauncherState = iota
 	CanUpdate
+	Downloading
+	StartedClient
+	CanUpdateResources
 	ClientNotInstalled
-	Idle
 )
 
 var (
@@ -62,12 +64,13 @@ var (
 		StartedClient:      "Running...",
 		Downloading:        "Downloading...",
 		CanUpdate:          "Update",
+		CanUpdateResources: "Update",
 	}
 )
 
 // TODO: refactor to not be so cluttered
 type Launcher struct {
-	Config  *launcher.Config
+	cfg     *config.Config
 	version string
 	core    *launcher.FabricLauncher
 	state   LauncherState
@@ -80,21 +83,26 @@ type Launcher struct {
 	statusText binding.String
 }
 
-func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
+func NewLauncher() (*Launcher, error) {
 	err := discord.Login()
 	if err != nil {
 		log.Println("discord login failed: ", err)
 	}
 
-	core := launcher.NewFabricLauncher(cfg)
-
 	a := app.NewWithID("com.github.tblockmc.launcher")
-	uk, err := static.Translations.ReadFile("translations/uk.json")
+	a.Settings().SetTheme(newTheme())
+
+	cfg, err := ReadPersistedConfigOrDefault(a)
 	if err != nil {
 		return nil, err
 	}
 
-	a.Settings().SetTheme(newTheme())
+	core := launcher.NewFabricLauncher(cfg)
+
+	uk, err := static.Translations.ReadFile("translations/uk.json")
+	if err != nil {
+		return nil, err
+	}
 
 	// hardcode ukrainian for now
 	err = lang.AddTranslationsForLocale(uk, lang.SystemLocale())
@@ -121,12 +129,16 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 
 	canUpdate, err := u.CanUpdate()
 	if err != nil {
-		w.SetTitle(err.Error())
+		log.Println("failed to fetch update data: ", err)
 	}
 
 	// hack: dev build version
-	if canUpdate && version != "9.9.9" && version != "" {
+	if canUpdate && version != "0.0.1" && version != "" {
 		state = CanUpdate
+	}
+
+	if utils.McVersion != cfg.Versions.Minecraft || utils.FabricLoaderVersion != cfg.Versions.FabricLoader || version != cfg.Versions.Launcher {
+		state = CanUpdateResources
 	}
 
 	mainBtnText := binding.NewString()
@@ -136,7 +148,7 @@ func NewLauncher(cfg *launcher.Config) (*Launcher, error) {
 
 	return &Launcher{
 		state: state, w: w, u: u, a: a,
-		core: core, Config: cfg,
+		core: core, cfg: cfg,
 		statusText: statusText,
 		version:    version,
 	}, nil
@@ -163,23 +175,23 @@ func (l *Launcher) openSettings() {
 func (l *Launcher) buildSettingsDialog() *dialog.CustomDialog {
 	javaPathInputLabel := widget.NewLabel(lang.L("Java path"))
 	javaPathInput := widget.NewEntry()
-	javaPathInput.SetText(l.Config.JavaPath)
+	javaPathInput.SetText(l.cfg.JavaPath)
 	javaPathInput.OnChanged = func(javaPath string) {
-		l.Config.JavaPath = javaPath
+		l.cfg.JavaPath = javaPath
 	}
 
 	memoryInputLabel := widget.NewLabel(lang.L("Minecraft memory"))
 	memoryInput := widget.NewEntry()
-	memoryInput.SetText(l.Config.Memory)
+	memoryInput.SetText(l.cfg.Memory)
 	memoryInput.OnChanged = func(memory string) {
-		l.Config.Memory = memory
+		l.cfg.Memory = memory
 	}
 
 	jvmArgsLabel := widget.NewLabel(lang.L("JVM arguments"))
 	jvmArgsInput := widget.NewEntry()
-	jvmArgsInput.SetText(l.Config.JvmArgs)
+	jvmArgsInput.SetText(l.cfg.JvmArgs)
 	jvmArgsInput.OnChanged = func(jvmArgs string) {
-		l.Config.JvmArgs = jvmArgs
+		l.cfg.JvmArgs = jvmArgs
 	}
 
 	return dialog.NewCustom(lang.L("Settings"), lang.L("Close"),
@@ -237,9 +249,9 @@ func (l *Launcher) setState(state LauncherState) {
 func (l *Launcher) buildUsernameInput() *widget.Entry {
 	entry := widget.NewEntry()
 	entry.OnChanged = func(data string) {
-		l.Config.Username = data
+		l.cfg.Username = data
 	}
-	entry.Text = l.Config.Username
+	entry.Text = l.cfg.Username
 	entry.PlaceHolder = lang.L("Enter your username")
 
 	return entry
@@ -268,6 +280,17 @@ func (l *Launcher) buildMainButton() *widget.Button {
 					} else {
 						l.a.Quit()
 					}
+				}
+
+				l.setState(Idle)
+			}()
+		case CanUpdateResources:
+			l.setState(Downloading)
+
+			go func() {
+				err := l.updateResources()
+				if err != nil {
+					l.showError(err)
 				}
 
 				l.setState(Idle)
@@ -306,12 +329,66 @@ func (l *Launcher) buildMainButton() *widget.Button {
 	})
 }
 
+func (l *Launcher) updateResources() error {
+	d := downloader.New(l.cfg)
+	if utils.McVersion != l.cfg.Versions.Minecraft || utils.FabricLoaderVersion != l.cfg.Versions.FabricLoader {
+		err := d.DeleteVersion()
+		if err != nil {
+			return err
+		}
+
+		l.statusText.Set(lang.L("Getting version info..."))
+		versionURL, err := d.GetVersionURL()
+		if err != nil {
+			return fmt.Errorf("failed to get version url: %s", err)
+		}
+
+		details, err := d.GetVersionDetails(versionURL)
+		if err != nil {
+			return fmt.Errorf("failed to get version details: %s", err)
+		}
+
+		l.statusText.Set(lang.L("Downloading Minecraft jar..."))
+		if err := d.DownloadClient(details); err != nil {
+			return fmt.Errorf("failed to download minecraft jar: %s", err)
+		}
+
+		l.statusText.Set(lang.L("Downloading libraries..."))
+		if err := d.DownloadLibraries(details.Libraries); err != nil {
+			return fmt.Errorf("failed to download minecraft libraries: %s", err)
+		}
+
+		l.statusText.Set(lang.L("Downloading assets..."))
+		if err := d.DownloadAssets(details.AssetIndex); err != nil {
+			return fmt.Errorf("failed to download minecraft assets: %s", err)
+		}
+
+		l.statusText.Set(lang.L("Download fabric..."))
+		if err := d.InstallFabric(); err != nil {
+			return fmt.Errorf("failed to download fabric: %s", err)
+		}
+	}
+
+	if l.a.Metadata().Version != l.cfg.Versions.Launcher {
+		err := d.DeleteModsAndResourcepacks()
+		if err != nil {
+			return err
+		}
+
+		l.statusText.Set(lang.L("Downloading mods..."))
+		if err := d.DownloadResouces(resources); err != nil {
+			return fmt.Errorf("failed to download mods: %s", err)
+		}
+	}
+
+	return nil
+}
+
 func (l *Launcher) install() error {
-	d := downloader.New(l.Config.GameDir)
-	fabricInstaller := downloader.NewFabricInstaller(l.Config.GameDir)
+	d := downloader.New(l.cfg)
 
 	l.statusText.Set(lang.L("Getting version info..."))
-	versionURL, err := d.GetVersionURL(l.Config.Version)
+	versionURL, err := d.GetVersionURL()
 	if err != nil {
 		return fmt.Errorf("failed to get version url: %s", err)
 	}
@@ -337,7 +414,7 @@ func (l *Launcher) install() error {
 	}
 
 	l.statusText.Set(lang.L("Download fabric..."))
-	if err := fabricInstaller.InstallFabric(utils.McVersion); err != nil {
+	if err := d.InstallFabric(); err != nil {
 		return fmt.Errorf("failed to download fabric: %s", err)
 	}
 
@@ -356,7 +433,11 @@ func (l *Launcher) install() error {
 		return fmt.Errorf("failed to download java: %s", err)
 	}
 
-	l.Config.JavaPath = d.GetJavaPath()
+	l.cfg.JavaPath = d.GetJavaPath()
 	l.statusText.Set(lang.L("Successfully installed minecraft!"))
 	return nil
+}
+
+func (l *Launcher) PersistConfig() error {
+	return utils.PersistConfig(l.cfg)
 }

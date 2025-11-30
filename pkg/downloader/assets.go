@@ -51,7 +51,7 @@ type AssetDownloadResult struct {
 }
 
 func (d *Downloader) DownloadAssets(assets types.AssetIndex) error {
-	assetsDir := filepath.Join(d.gameDir, "assets")
+	assetsDir := filepath.Join(d.cfg.GameDir, "assets")
 	indexPath := filepath.Join(assetsDir, "indexes", "5.json") // 1.21.4
 
 	if err := d.downloadWithChecksum(assets.URL, indexPath, assets.SHA1); err != nil {
@@ -149,12 +149,12 @@ func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex) error {
 
 		total := downloaded + skipped + failed
 		if total%100 == 0 {
-			fmt.Fprintf(d.stdout, "Progress: %d/%d assets (downloaded: %d, skipped: %d, failed: %d)\n",
+			fmt.Printf("Progress: %d/%d assets (downloaded: %d, skipped: %d, failed: %d)\n",
 				total, len(assetIndex.Objects), downloaded, skipped, failed)
 		}
 	}
 
-	fmt.Fprintf(d.stdout, "Asset download complete: %d downloaded, %d skipped, %d failed\n", downloaded, skipped, failed)
+	fmt.Printf("Asset download complete: %d downloaded, %d skipped, %d failed\n", downloaded, skipped, failed)
 
 	if failed > 0 {
 		return fmt.Errorf("%d assets failed to download", failed)
@@ -170,7 +170,7 @@ func (d *Downloader) assetDownloadWorker(jobs <-chan AssetDownloadJob, results c
 		result := AssetDownloadResult{Name: job.Name}
 
 		url := fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", job.Hash[:2], job.Hash)
-		assetPath := filepath.Join(d.gameDir, "assets", "objects", job.Hash[:2], job.Hash)
+		assetPath := filepath.Join(d.cfg.GameDir, "assets", "objects", job.Hash[:2], job.Hash)
 
 		if info, err := os.Stat(assetPath); err == nil {
 			if info.Size() == int64(job.Size) {

@@ -8,27 +8,21 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/havrydotdev/tblock-launcher/pkg/config"
 )
 
 type Downloader struct {
-	client  *http.Client
-	gameDir string
-	stdout  io.Writer
+	client *http.Client
+	cfg    *config.Config
 }
 
-func New(gameDir string) *Downloader {
-	return &Downloader{
-		gameDir: gameDir, client: http.DefaultClient, stdout: os.Stdout,
-	}
+func New(cfg *config.Config) *Downloader {
+	return &Downloader{cfg: cfg, client: http.DefaultClient}
 }
 
 func (d *Downloader) WithHTTPClient(client *http.Client) *Downloader {
 	d.client = client
-	return d
-}
-
-func (d *Downloader) WithStdout(stdout io.Writer) *Downloader {
-	d.stdout = stdout
 	return d
 }
 

@@ -26,16 +26,16 @@ var (
 )
 
 func (d *Downloader) GetJavaPath() string {
-	javaBaseFolder := path.Join("java", fmt.Sprintf("jdk-%s", JavaRelease))
+	javaBaseFolder := path.Join(d.cfg.GameDir, "java", fmt.Sprintf("jdk-%s", JavaRelease))
 	if runtime.GOOS == "windows" {
-		return filepath.Join(d.gameDir, javaBaseFolder, "bin")
+		return filepath.Join(javaBaseFolder, "bin")
 	}
 
 	if runtime.GOOS == "darwin" {
-		return filepath.Join(d.gameDir, javaBaseFolder, "Contents", "Home", "bin")
+		return filepath.Join(javaBaseFolder, "Contents", "Home", "bin")
 	}
 
-	return filepath.Join(d.gameDir, javaBaseFolder, "bin", "java")
+	return filepath.Join(javaBaseFolder, "bin", "java")
 }
 
 func (d *Downloader) DownloadJava() error {
@@ -45,7 +45,7 @@ func (d *Downloader) DownloadJava() error {
 		return fmt.Errorf("unsupported platform: %s %s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	zipPath := filepath.Join(d.gameDir, "java.zip")
+	zipPath := filepath.Join(d.cfg.GameDir, "java.zip")
 	if err := d.downloadJava(javaURL, zipPath); err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (d *Downloader) downloadJava(url, dest string) error {
 }
 
 func (d *Downloader) extractJava(zipPath string) error {
-	javaDir := filepath.Join(d.gameDir, "java")
+	javaDir := filepath.Join(d.cfg.GameDir, "java")
 	os.RemoveAll(javaDir)
 	err := os.MkdirAll(javaDir, 0755)
 	if err != nil {

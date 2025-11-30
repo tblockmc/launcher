@@ -49,7 +49,7 @@ jobs:
       
       - name: Package
         run: |
-          fyne package -os darwin --app-version ${VERSION:-9.9.9} --icon Icon.png --release
+          fyne package -os darwin --app-version ${VERSION:-""} --icon Icon.png --release
           cp build/darwin/Info.plist TBlockMC.app/Contents/Info.plist
           codesign --force --deep --preserve-metadata=entitlements,requirements,flags,runtime --sign - "./TBlockMC.app/Contents/MacOS/tblock-launcher"
       
@@ -107,7 +107,7 @@ jobs:
       
     - name: Package
       run: |
-         fyne package -os windows --app-version ${VERSION:-9.9.9} --icon Icon.png --executable tblockmc.exe --release
+         fyne package -os windows --app-version ${VERSION:-""} --icon Icon.png --executable tblockmc.exe --release
 
     - name: Create zip
       run: zip TBlockMC-windows-x64.zip tblockmc.exe

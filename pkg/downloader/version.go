@@ -8,7 +8,7 @@ import (
 	"github.com/havrydotdev/tblock-launcher/pkg/types"
 )
 
-func (d *Downloader) GetVersionURL(versionId string) (string, error) {
+func (d *Downloader) GetVersionURL() (string, error) {
 	url := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 	resp, err := http.Get(url)
@@ -24,14 +24,14 @@ func (d *Downloader) GetVersionURL(versionId string) (string, error) {
 
 	var versionURL string
 	for _, version := range manifest.Versions {
-		if version.ID == versionId {
+		if version.ID == d.cfg.Versions.Minecraft {
 			versionURL = version.URL
 			break
 		}
 	}
 
 	if versionURL == "" {
-		return "", fmt.Errorf("version %s not found", versionId)
+		return "", fmt.Errorf("version %s not found", d.cfg.Versions.Minecraft)
 	}
 
 	return versionURL, nil

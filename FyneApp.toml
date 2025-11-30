@@ -2,7 +2,7 @@
   Icon = "Icon.png"
   Name = "TBlockMC"
   ID = "com.tblockmc.launcher"
-  Build = 61
+  Build = 72
 
 [Development]
   HelperText = "This binary was built with debug symbols"
