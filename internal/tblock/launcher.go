@@ -87,6 +87,7 @@ type Launcher struct {
 	a          fyne.App
 	u          *updater.Updater
 	mainButton *widget.Button
+	progress   *widget.ProgressBar
 	settings   *dialog.CustomDialog
 	statusText binding.String
 }
@@ -154,6 +155,10 @@ func NewLauncher() (*Launcher, error) {
 	mainBtnText := binding.NewString()
 	mainBtnText.Set(lang.L(mainBtnTexts[state]))
 
+	progress := widget.NewProgressBar()
+	progress.TextFormatter = func() string { return "" }
+	progress.Hide()
+
 	statusText := binding.NewString()
 
 	logWriter := getLogWriter(cfg.GameDir, isDev)
@@ -165,7 +170,7 @@ func NewLauncher() (*Launcher, error) {
 		statusText: statusText,
 		state:      state, w: w, u: u, a: a,
 		core: core, cfg: cfg, isDev: isDev,
-		log: logger,
+		log: logger, progress: progress,
 	}, nil
 }
 
@@ -242,11 +247,14 @@ func (l *Launcher) buildUI() {
 		widget.NewButtonWithIcon("", theme.Icon(theme.IconNameSettings), l.openSettings),
 	)
 
+	progress := container.NewVBox(
+		widget.NewLabelWithData(l.statusText),
+		container.New(&progressBarLayout{height: 12}, l.progress),
+	)
+
 	page := container.NewPadded(
 		container.NewBorder(
-			topMenu, container.NewVBox(
-				widget.NewLabelWithData(l.statusText), bottom,
-			), nil, nil,
+			topMenu, container.NewVBox(progress, bottom), nil, nil,
 		),
 	)
 
@@ -350,35 +358,8 @@ func (l *Launcher) updateResources() error {
 			return err
 		}
 
-		l.statusText.Set(lang.L("Getting version info..."))
-		versionURL, err := d.GetVersionURL()
-		if err != nil {
-			return fmt.Errorf("failed to get version url: %s", err)
-		}
-
-		details, err := d.GetVersionDetails(versionURL)
-		if err != nil {
-			return fmt.Errorf("failed to get version details: %s", err)
-		}
-
-		l.statusText.Set(lang.L("Downloading Minecraft jar..."))
-		if err := d.DownloadClient(details); err != nil {
-			return fmt.Errorf("failed to download minecraft jar: %s", err)
-		}
-
-		l.statusText.Set(lang.L("Downloading libraries..."))
-		if err := d.DownloadLibraries(details.Libraries); err != nil {
-			return fmt.Errorf("failed to download minecraft libraries: %s", err)
-		}
-
-		l.statusText.Set(lang.L("Downloading assets..."))
-		if err := d.DownloadAssets(details.AssetIndex); err != nil {
-			return fmt.Errorf("failed to download minecraft assets: %s", err)
-		}
-
-		l.statusText.Set(lang.L("Download fabric..."))
-		if err := d.InstallFabric(); err != nil {
-			return fmt.Errorf("failed to download fabric: %s", err)
+		if err := l.installVersion(d); err != nil {
+			return err
 		}
 	}
 
@@ -388,9 +369,8 @@ func (l *Launcher) updateResources() error {
 			return err
 		}
 
-		l.statusText.Set(lang.L("Downloading mods..."))
-		if err := d.DownloadResouces(resources); err != nil {
-			return fmt.Errorf("failed to download mods: %s", err)
+		if err := l.downloadMods(d); err != nil {
+			return err
 		}
 	}
 
@@ -400,40 +380,14 @@ func (l *Launcher) updateResources() error {
 func (l *Launcher) install() error {
 	d := downloader.New(l.cfg).WithLogger(l.log)
 
-	l.statusText.Set(lang.L("Getting version info..."))
-	versionURL, err := d.GetVersionURL()
-	if err != nil {
-		return fmt.Errorf("failed to get version url: %s", err)
+	l.progress.Show()
+
+	if err := l.installVersion(d); err != nil {
+		return err
 	}
 
-	details, err := d.GetVersionDetails(versionURL)
-	if err != nil {
-		return fmt.Errorf("failed to get version details: %s", err)
-	}
-
-	l.statusText.Set(lang.L("Downloading Minecraft jar..."))
-	if err := d.DownloadClient(details); err != nil {
-		return fmt.Errorf("failed to download minecraft jar: %s", err)
-	}
-
-	l.statusText.Set(lang.L("Downloading libraries..."))
-	if err := d.DownloadLibraries(details.Libraries); err != nil {
-		return fmt.Errorf("failed to download minecraft libraries: %s", err)
-	}
-
-	l.statusText.Set(lang.L("Downloading assets..."))
-	if err := d.DownloadAssets(details.AssetIndex); err != nil {
-		return fmt.Errorf("failed to download minecraft assets: %s", err)
-	}
-
-	l.statusText.Set(lang.L("Download fabric..."))
-	if err := d.InstallFabric(); err != nil {
-		return fmt.Errorf("failed to download fabric: %s", err)
-	}
-
-	l.statusText.Set(lang.L("Downloading mods..."))
-	if err := d.DownloadResouces(resources); err != nil {
-		return fmt.Errorf("failed to download mods: %s", err)
+	if err := l.downloadMods(d); err != nil {
+		return err
 	}
 
 	l.statusText.Set(lang.L("Writing static files..."))
@@ -447,8 +401,59 @@ func (l *Launcher) install() error {
 	}
 
 	l.cfg.JavaPath = d.GetJavaPath()
-	l.statusText.Set(lang.L("Successfully installed minecraft!"))
+	l.statusText.Set("")
+	l.progress.Hide()
 	return nil
+}
+
+func (l *Launcher) downloadMods(d *downloader.Downloader) error {
+	l.statusText.Set(lang.L("Downloading mods..."))
+	if err := d.DownloadResouces(resources); err != nil {
+		return fmt.Errorf("failed to download mods: %s", err)
+	}
+
+	return nil
+}
+
+func (l *Launcher) installVersion(d *downloader.Downloader) error {
+	l.statusText.Set(lang.L("Getting version info..."))
+	versionURL, err := d.GetVersionURL()
+	if err != nil {
+		return fmt.Errorf("failed to get version url: %s", err)
+	}
+
+	details, err := d.GetVersionDetails(versionURL)
+	if err != nil {
+		return fmt.Errorf("failed to get version details: %s", err)
+	}
+
+	l.statusText.Set(lang.L("Downloading Minecraft jar..."))
+	if err := d.DownloadClient(details, l.progressCallback); err != nil {
+		return fmt.Errorf("failed to download minecraft jar: %s", err)
+	}
+
+	l.statusText.Set(lang.L("Downloading libraries..."))
+	if err := d.DownloadLibraries(details.Libraries, l.progressCallback); err != nil {
+		return fmt.Errorf("failed to download minecraft libraries: %s", err)
+	}
+
+	l.statusText.Set(lang.L("Downloading assets..."))
+	if err := d.DownloadAssets(details.AssetIndex, l.progressCallback); err != nil {
+		return fmt.Errorf("failed to download minecraft assets: %s", err)
+	}
+
+	l.statusText.Set(lang.L("Downloading fabric..."))
+	if err := d.InstallFabric(); err != nil {
+		return fmt.Errorf("failed to download fabric: %s", err)
+	}
+
+	return nil
+}
+
+func (l *Launcher) progressCallback(downloaded, total int64) {
+	fyne.Do(func() {
+		l.progress.SetValue(1.0 / float64(total) * float64(downloaded))
+	})
 }
 
 func (l *Launcher) PersistConfig() error {

@@ -19,6 +19,8 @@ type Downloader struct {
 	log    *slog.Logger
 }
 
+type ProgressCallback func(downloaded, total int64)
+
 func New(cfg *config.Config) *Downloader {
 	return &Downloader{cfg: cfg, client: http.DefaultClient, log: slog.Default()}
 }
@@ -33,7 +35,7 @@ func (d *Downloader) WithLogger(log *slog.Logger) *Downloader {
 	return d
 }
 
-func (d *Downloader) download(url, filepath string) error {
+func (d *Downloader) download(url, filepath string, onProgress ProgressCallback) error {
 	if err := os.MkdirAll(filepath[:strings.LastIndex(filepath, string(os.PathSeparator))], 0755); err != nil {
 		return err
 	}
@@ -59,8 +61,9 @@ func (d *Downloader) download(url, filepath string) error {
 		return err
 	}
 
+	downloaded := 0
+	total := resp.ContentLength
 	buffer := make([]byte, 32*1024)
-
 	for {
 		n, err := resp.Body.Read(buffer)
 		if n > 0 {
@@ -74,6 +77,10 @@ func (d *Downloader) download(url, filepath string) error {
 			}
 			return err
 		}
+
+		downloaded += n
+
+		onProgress(int64(downloaded), total)
 	}
 
 	out.Close()
@@ -85,8 +92,8 @@ func (d *Downloader) download(url, filepath string) error {
 	return nil
 }
 
-func (d *Downloader) downloadWithChecksum(url, filepath, expectedSHA1 string) error {
-	if err := d.download(url, filepath); err != nil {
+func (d *Downloader) downloadWithChecksum(url, filepath, expectedSHA1 string, onProgress ProgressCallback) error {
+	if err := d.download(url, filepath, onProgress); err != nil {
 		return err
 	}
 

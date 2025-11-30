@@ -56,14 +56,14 @@ func (d *Downloader) getNativesPath() string {
 	return filepath.Join(d.cfg.GameDir, "natives")
 }
 
-func (d *Downloader) DownloadClient(details *types.VersionDetails) error {
+func (d *Downloader) DownloadClient(details *types.VersionDetails, onProgress ProgressCallback) error {
 	client := details.Downloads.Client
 	clientPath := d.getClientPath()
 
-	return d.downloadWithChecksum(client.URL, clientPath, client.SHA1)
+	return d.downloadWithChecksum(client.URL, clientPath, client.SHA1, onProgress)
 }
 
-func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
+func (d *Downloader) DownloadLibraries(libraries []types.Library, onProgress ProgressCallback) error {
 	librariesPath := d.getLibrariesPath()
 	for i, library := range libraries {
 		if !d.shouldDownloadLibrary(library) {
@@ -83,8 +83,9 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library) error {
 		libraryPath := filepath.Join(librariesPath, artifact.Path)
 
 		d.log.Info("downloading library", slog.Int("progress", i+1), slog.Int("total", len(libraries)), slog.String("name", artifact.Path))
+		onProgress(int64(i+1), int64(len(libraries)))
 
-		if err := d.downloadWithChecksum(artifact.URL, libraryPath, artifact.SHA1); err != nil {
+		if err := d.downloadWithChecksum(artifact.URL, libraryPath, artifact.SHA1, func(downloaded, total int64) {}); err != nil {
 			return fmt.Errorf("failed to download library %s: %v", library.Name, err)
 		}
 	}
@@ -114,7 +115,7 @@ func (d *Downloader) DownloadResouces(resources []ResouceData) error {
 	for _, r := range resources {
 		dir := paths[r.Type]
 		name := path.Base(r.URL)
-		err := d.download(r.URL, path.Join(dir, name))
+		err := d.download(r.URL, path.Join(dir, name), func(downloaded, total int64) {})
 		if err != nil {
 			return err
 		}

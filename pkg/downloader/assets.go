@@ -51,11 +51,11 @@ type AssetDownloadResult struct {
 	Skipped bool
 }
 
-func (d *Downloader) DownloadAssets(assets types.AssetIndex) error {
+func (d *Downloader) DownloadAssets(assets types.AssetIndex, onProgress ProgressCallback) error {
 	assetsDir := filepath.Join(d.cfg.GameDir, "assets")
 	indexPath := filepath.Join(assetsDir, "indexes", "5.json") // 1.21.4
 
-	if err := d.downloadWithChecksum(assets.URL, indexPath, assets.SHA1); err != nil {
+	if err := d.downloadWithChecksum(assets.URL, indexPath, assets.SHA1, func(downloaded, total int64) {}); err != nil {
 		return fmt.Errorf("failed to download asset index: %v", err)
 	}
 
@@ -64,7 +64,7 @@ func (d *Downloader) DownloadAssets(assets types.AssetIndex) error {
 		return fmt.Errorf("failed to parse asset index: %v", err)
 	}
 
-	return d.downloadAllAssets(assetIndex)
+	return d.downloadAllAssets(assetIndex, onProgress)
 }
 
 func (d *Downloader) parseAssetIndex(indexPath string) (*AssetIndex, error) {
@@ -109,9 +109,10 @@ func (d *Downloader) parseAssetIndex(indexPath string) (*AssetIndex, error) {
 	return assetIndex, nil
 }
 
-func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex) error {
-	jobs := make(chan AssetDownloadJob, len(assetIndex.Objects))
-	results := make(chan AssetDownloadResult, len(assetIndex.Objects))
+func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex, onProgress ProgressCallback) error {
+	total := len(assetIndex.Objects)
+	jobs := make(chan AssetDownloadJob, total)
+	results := make(chan AssetDownloadResult, total)
 
 	var wg sync.WaitGroup
 	for range ConcurrentDownloads {
@@ -148,10 +149,14 @@ func (d *Downloader) downloadAllAssets(assetIndex *AssetIndex) error {
 			downloaded++
 		}
 
-		total := downloaded + skipped + failed
-		if total%100 == 0 {
-			d.log.Info("successfully downloaded asset", slog.Int("progress", total),
-				slog.Int("total", len(assetIndex.Objects)), slog.Int("downloaded", downloaded),
+		progress := downloaded + skipped + failed
+		if onProgress != nil {
+			onProgress(int64(progress), int64(total))
+		}
+
+		if progress%100 == 0 {
+			d.log.Info("successfully downloaded asset", slog.Int("progress", progress),
+				slog.Int("total", total), slog.Int("downloaded", downloaded),
 				slog.Int("skipped", skipped), slog.Int("failed", failed))
 		}
 	}
@@ -182,7 +187,7 @@ func (d *Downloader) assetDownloadWorker(jobs <-chan AssetDownloadJob, results c
 			}
 		}
 
-		if err := d.downloadWithChecksum(url, assetPath, job.Hash); err != nil {
+		if err := d.downloadWithChecksum(url, assetPath, job.Hash, func(downloaded, total int64) {}); err != nil {
 			result.Error = err
 		}
 

@@ -23,6 +23,10 @@ func (t tblockTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 		return color.Transparent
 	}
 
+	if name == theme.ColorNamePrimary {
+		return color.RGBA{103, 176, 12, 255}
+	}
+
 	return theme.DarkTheme().Color(name, variant)
 }
 
