@@ -29,7 +29,7 @@ import (
 type LauncherState int
 
 const (
-	Idle LauncherState = iota
+	Ready LauncherState = iota
 	CanUpdate
 	Downloading
 	StartedClient
@@ -65,7 +65,7 @@ var (
 	}
 
 	mainBtnTexts = map[LauncherState]string{
-		Idle:               "Play!",
+		Ready:              "Play!",
 		ClientNotInstalled: "Download",
 		StartedClient:      "Running...",
 		Downloading:        "Downloading...",
@@ -133,7 +133,7 @@ func NewLauncher() (*Launcher, error) {
 
 	w := a.NewWindow(fmt.Sprintf("%s %s", lang.L("TBlockMC"), version))
 
-	state := Idle
+	state := Ready
 	if !core.IsFabricInstalled() {
 		state = ClientNotInstalled
 	}
@@ -300,10 +300,11 @@ func (l *Launcher) buildMainButton() *widget.Button {
 				if _, err := l.u.Update(); err != nil {
 					l.showError(err)
 				} else {
+					l.u.CleanUp()
 					l.a.Quit()
 				}
 
-				l.setState(Idle)
+				l.setState(Ready)
 			}()
 		case CanUpdateResources:
 			l.setState(Downloading)
@@ -314,7 +315,7 @@ func (l *Launcher) buildMainButton() *widget.Button {
 					l.showError(err)
 				}
 
-				l.setState(Idle)
+				l.setState(Ready)
 			}()
 		case ClientNotInstalled:
 			go func() {
@@ -325,9 +326,9 @@ func (l *Launcher) buildMainButton() *widget.Button {
 					l.showError(err)
 				}
 
-				fyne.Do(func() { l.setState(Idle) })
+				fyne.Do(func() { l.setState(Ready) })
 			}()
-		case Idle:
+		case Ready:
 			l.setState(StartedClient)
 			l.statusText.Set("")
 
@@ -342,7 +343,7 @@ func (l *Launcher) buildMainButton() *widget.Button {
 				}
 
 				fyne.Do(func() {
-					l.setState(Idle)
+					l.setState(Ready)
 					l.w.Show()
 				})
 			}()
@@ -373,6 +374,8 @@ func (l *Launcher) updateResources() error {
 			return err
 		}
 	}
+
+	l.cfg.Versions.Launcher = l.a.Metadata().Version
 
 	return nil
 }

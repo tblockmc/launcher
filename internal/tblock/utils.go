@@ -70,7 +70,7 @@ func getLogWriter(gameDir string, isDev bool) io.Writer {
 		return os.Stdout
 	}
 
-	file, err := os.OpenFile(filepath.Join(gameDir, "tblock.log"), os.O_RDWR, os.ModeAppend)
+	file, err := os.Create(filepath.Join(gameDir, "tblock.log"))
 	if err != nil {
 		log.Println("failed to open log file: ", err)
 		return os.Stdout

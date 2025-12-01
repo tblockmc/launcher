@@ -90,6 +90,7 @@ func (d *Downloader) downloadFabricLibraries(libraries []FabricLibrary) error {
 	return nil
 }
 
+// TODO why am i not using download function here?
 func (d *Downloader) downloadFabricLibrary(library FabricLibrary) error {
 	path := d.mavenToPath(library.Name)
 	url := d.mavenToURL(library.Name)

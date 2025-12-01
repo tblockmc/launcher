@@ -16,11 +16,15 @@ import (
 	"strings"
 )
 
+// TODO why is this value here and not in config??
 const (
 	JavaVersion = "21"
 	JavaRelease = "21.0.9+10"
 )
 
+// TODO add graalvm and see if its decreasing start up times
+// so players dont rethink their life choices while waiting
+// for this fuckass game to boot up
 var (
 	javaDownloadUrl = fmt.Sprintf("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-%s", url.PathEscape(JavaRelease))
 )

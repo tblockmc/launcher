@@ -1,5 +1,7 @@
 package types
 
+// TODO oh yeah, i dont know what half of these does
+// just types everywhere, move it all into a single package
 type Rule struct {
 	Action string  `json:"action"`
 	OS     *OSRule `json:"os,omitempty"`
@@ -9,7 +11,6 @@ type OSRule struct {
 	Name string `json:"name"`
 }
 
-// Version manifest from Mojang
 type VersionManifest struct {
 	Latest   LatestVersions `json:"latest"`
 	Versions []Version      `json:"versions"`

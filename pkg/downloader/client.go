@@ -75,6 +75,7 @@ func (d *Downloader) DownloadLibraries(libraries []types.Library, onProgress Pro
 			continue
 		}
 
+		// TODO why is this happening?
 		// hack, fabric requires another version of asm
 		if filepath.Base(artifact.Path) == "asm-9.6.jar" {
 			continue
@@ -132,6 +133,8 @@ func mcRuleToOs(mcOs string) string {
 	return mcOs
 }
 
+// TODO rules actually have a lot more conditions
+// also, when i figure this out launcher itself wont be so 1.21.8 dependent
 func (d *Downloader) shouldDownloadLibrary(library types.Library) bool {
 	if len(library.Rules) == 0 {
 		return true
@@ -146,6 +149,7 @@ func (d *Downloader) shouldDownloadLibrary(library types.Library) bool {
 	return true
 }
 
+// TODO host them on cdn?
 func (d *Downloader) WriteOverrides(overrides []StaticAsset) error {
 	for _, s := range overrides {
 		filePath := path.Join(d.cfg.GameDir, s.Path)

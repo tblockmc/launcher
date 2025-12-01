@@ -3,7 +3,6 @@ package launcher
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +15,9 @@ import (
 	"github.com/havrydotdev/tblock-launcher/pkg/downloader"
 )
 
+// just ignore this whole file...
+// launcher is not ready as a standalone library, so many hardcoded/magic values
+// but it works i guess
 type FabricLauncher struct {
 	cfg               *config.Config
 	fabricVersionName string
@@ -76,8 +78,6 @@ func (f *FabricLauncher) buildFabricCommand(versionName string) (*exec.Cmd, erro
 	}
 
 	javaExec := filepath.Join(f.cfg.JavaPath, javaBinary)
-
-	log.Println(javaExec, allArgs)
 
 	return exec.Command(javaExec, allArgs...), nil
 }
@@ -154,8 +154,7 @@ func (f *FabricLauncher) buildFabricJVMArgs(profile *downloader.FabricProfile, c
 		"-Dorg.lwjgl.system.SharedLibraryExtractPath=" + natives,
 		"-Dio.netty.native.workdir=" + natives,
 		"-Dminecraft.launcher.brand=tblock",
-		// TODO
-		"-Dminecraft.launcher.version=0.2.1",
+		"-Dminecraft.launcher.version=" + f.cfg.Versions.Launcher,
 		"-cp", classpath,
 	}
 
@@ -165,6 +164,15 @@ func (f *FabricLauncher) buildFabricJVMArgs(profile *downloader.FabricProfile, c
 
 	if runtime.GOOS == "darwin" {
 		args = append(args, "-XstartOnFirstThread")
+	}
+
+	if runtime.GOOS == "windows" {
+		// use discrete gpu on laptops
+		args = append(args, "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump")
+	}
+
+	if runtime.GOARCH == "amd64" {
+		args = append(args, "-Xss1M")
 	}
 
 	for _, arg := range profile.Arguments.JVM {
@@ -188,7 +196,7 @@ func (f *FabricLauncher) buildFabricGameArgs(versionName string) []string {
 		"--version", versionName,
 		"--gameDir", f.cfg.GameDir,
 		"--assetsDir", filepath.Join(f.cfg.GameDir, "assets"),
-		"--assetIndex", "5", // For 1.21.4
+		"--assetIndex", "5",
 		"--accessToken", "0",
 		"--userType", "legacy",
 		"--uuid", uuid,

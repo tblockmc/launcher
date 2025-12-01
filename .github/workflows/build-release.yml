@@ -46,7 +46,8 @@ jobs:
         run: |
           TAG=${{ github.ref_name }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
-      
+        
+        # TODO build info.plist dynamically 
       - name: Package
         run: |
           fyne package -os darwin --app-version ${VERSION:-""} --icon Icon.png --release

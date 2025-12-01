@@ -35,6 +35,7 @@ func (d *Downloader) WithLogger(log *slog.Logger) *Downloader {
 	return d
 }
 
+// TODO
 func (d *Downloader) download(url, filepath string, onProgress ProgressCallback) error {
 	if err := os.MkdirAll(filepath[:strings.LastIndex(filepath, string(os.PathSeparator))], 0755); err != nil {
 		return err

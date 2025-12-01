@@ -8,7 +8,6 @@ import (
 	"github.com/havrydotdev/tblock-launcher/internal/tblock"
 )
 
-// TODO: remove console logging in release mode
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
